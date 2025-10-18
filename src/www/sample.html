@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HTML GUI Bridge Demo</title>
+  <!-- Qt's built-in channel script -->
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    pre { background: #111; color: #eee; padding: 10px; border-radius: 8px; }
+    button { padding: 8px 14px; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h1>JS ↔️ Python Bridge</h1>
+  <div>
+    <button id="btnEcho">JS → Python echo()</button>
+    <button id="btnJson">JS → Python receive_json()</button>
+    <button id="btnAsk">JS asks Python to push (signal)</button>
+  </div>
+  <h3>Events</h3>
+  <pre id="log"></pre>
+
+  <script>
+    function log(...args) {
+      const el = document.getElementById('log');
+      el.textContent += args.map(a => (typeof a === 'string' ? a : JSON.stringify(a, null, 2))).join(' ') + "\n";
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // Wait for the WebChannel to be ready
+    new QWebChannel(qt.webChannelTransport, function(channel) {
+      window.bridge = channel.objects.bridge;
+
+      // Listen for Python -> JS signal
+      bridge.py_to_js.connect(function(payload) {
+        try { log("Signal py_to_js:", JSON.parse(payload)); }
+        catch { log("Signal py_to_js (raw):", payload); }
+      });
+
+      // Wire buttons
+      document.getElementById('btnEcho').onclick = function() {
+        // Slots can return a value; with WebChannel you pass a callback as the last arg
+        bridge.echo("Hello from JS to Python!", function(result) {
+          log("echo() result:", result);
+        });
+      };
+
+      document.getElementById('btnJson').onclick = function() {
+        const data = { from: "js", time: new Date().toISOString(), nums: [1,2,3] };
+        bridge.receive_json(JSON.stringify(data)); // no return value
+        log("Sent JSON to Python:", data);
+      };
+
+      document.getElementById('btnAsk').onclick = function() {
+        bridge.ask_python_to_push(); // Python will emit py_to_js
+        log("Asked Python to push via signal…");
+      };
+
+      log("WebChannel ready. Try the buttons!");
+    });
+  </script>
+</body>
+</html>

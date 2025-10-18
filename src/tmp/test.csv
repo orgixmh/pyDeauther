@@ -1,0 +1,11 @@
+BSSID, First time seen, Last time seen, channel, Speed, Privacy, Cipher, Authentication, Power, beacons, IV, LAN IP, ID-length, ESSID, Key
+00:11:22:33:44:55, 2025-10-18 09:00, 2025-10-18 09:10, 6, 54, WPA2, CCMP, PSK, -43, 1200, 0, 0.0.0.0, 9, HomeWiFi, 
+66:77:88:99:AA:BB, 2025-10-18 09:02, 2025-10-18 09:10, 1, 130, WPA2, CCMP, PSK, -58, 900, 0, 0.0.0.0, 0, , 
+CC:DD:EE:FF:00:11, 2025-10-18 09:03, 2025-10-18 09:11, 11, 300, WPA3, CCMP, SAE, -50, 1500, 0, 0.0.0.0, 12, "Cafe, Free WiFi", 
+22:33:44:55:66:77, 2025-10-18 09:04, 2025-10-18 09:12, 36, 433, WPA2, CCMP, PSK, -65, 700, 0, 0.0.0.0, 7, OfficeAP, 
+
+Station MAC, First time seen, Last time seen, Power, # packets, BSSID, Probed ESSIDs
+AA:BB:CC:DD:EE:FF, 2025-10-18 09:05, 2025-10-18 09:10, -60, 120, 00:11:22:33:44:55, 
+11:22:33:44:55:66, 2025-10-18 09:06, 2025-10-18 09:11, -70, 80, 66:77:88:99:AA:BB, 
+77:88:99:AA:BB:CC, 2025-10-18 09:07, 2025-10-18 09:12, -75, 50, (not associated), HomeWiFi;OfficeAP
+DE:AD:BE:EF:00:01, 2025-10-18 09:08, 2025-10-18 09:12, -55, 140, CC:DD:EE:FF:00:11, 
