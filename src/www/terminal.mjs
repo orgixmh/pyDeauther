@@ -2,6 +2,16 @@
 import { type } from "./util/io.js";
 import { toggleFullscreen } from "./util/screens.js";
 import { registerHandlers } from "./util/ui.mjs";
+import { power, on, off } from "./util/power.js";
+
+function togglePower() {
+	let isOff = document.getElementById("monitor").classList.contains("off");
+	if (isOff) {
+		on();
+	} else {
+		off();
+	}
+}
 
 async function onLoad() {
 	// Check for query parameters in the URL, e.g. ?command=help&fullscreen=1
@@ -21,10 +31,11 @@ async function onLoad() {
 	if (command || debugParam) {
 		run(command, debugParam)
 	}
+
 }
 
 async function run(command, debug) {
-	const { power } = await import("./util/power.js");
+	
 	const { parse } = await import("./util/io.js");
 
 	// Turns on the screen

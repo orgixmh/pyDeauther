@@ -263,7 +263,7 @@ Game.prototype.quit = function(win) {
 Game.prototype.handlePassword = function(target) {
 	let wordNr = target.dataset.word;
 	let pw = this.selectedWords[wordNr];
-
+	
 	if (pw === this.password) {
         this.quit(true);
 	} else {
@@ -280,7 +280,7 @@ Game.prototype.start = async function() {
     );
 
     // Get list of words
-    let words = await fetch("../util/words.txt").then(res => res.text());
+    let words = await fetch("./util/words.txt").then(res => res.text());
     words = words.split(" ");
 
     // Get arrays of words of the same length, the object is indexed by word length

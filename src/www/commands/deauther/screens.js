@@ -1,4 +1,4 @@
-import { parse, type, prompt, input,scroll } from "./io.js";
+import { parse, type, prompt, input } from "./io.js";
 import pause from "./pause.js";
 import alert from "./alert.js";
 import say from "./speak.js";
@@ -8,26 +8,13 @@ const PW = "admin";
 
 const fastMode = false;
 
-/** Boot screen */
-export async function boot() {
-	clear();
-	if (!document.pyConfig.fast_mode) {
-		await type([" ","© Umbrella Corporation 1989. All rights reserved."," ","CLASSIFIED SYSTEM — LEVEL 5 CLEARANCE REQUIRED","Unauthorized access will be repurposed for the NEMESIS Initiative."," ","Status: HIVE CORE ONLINE ▓▓▓▓▓▓▓▓ 100%"," "], {
-			lineWait: 1,
-			finalWait: 1
-		});
-	}
-
-	await  main();
-
-}
 export async function typeOut(text) {
 		await type([text], {
 			lineWait: 50
 		});
-		scroll()
 }
 
+/** Main input terminal, recursively calls itself */
 export async function main() {
 	let command = await input();
 	try {

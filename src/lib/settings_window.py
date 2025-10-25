@@ -36,6 +36,10 @@ GENERAL_LABELS = {
 }
 
 APPLICATIONS_LABELS = {
+    "wifi_card":"Wifi card name",
+    "deauth_count":"Deauth count",
+    "scan_time":"Scant time in seconds",
+    "max_attack_loop": "Re-scan every x attacks",
     "enable_monitor_cmds": "Enable Monitor mode commands",
     "disable_monitor_cmds": "Disable Monitor mode commands",
     "set_channel_cmd": "Set channel command",
@@ -63,10 +67,14 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "automatic_turn_on": False,
 
     # Applications
-    "enable_monitor_cmds": "ifconfig wlan0 down\niwconfig wlan0 mode monitor\nifconfig wlan0 up\n",
-    "disable_monitor_cmds": "ifconfig wlan0 down\niwconfig wlan0 mode managed\nifconfig wlan0 up\n",
+    "enable_monitor_cmds": "ifconfig wlan0 down\niwconfig wlan0 mode monitor\nifconfig wlan0 up",
+    "disable_monitor_cmds": "ifconfig wlan0 down\niwconfig wlan0 mode managed\nifconfig wlan0 up",
     "set_channel_cmd": "iw wlan0 set channel %CHANNEL%",
     "scan_cmd": "airodump-ng wlan0 --write output /tmp/airodump-ng.csv",
+    "wifi_card":"wlan0",
+    "deauth_count":"10",
+    "scan_time":"20",
+    "max_attack_loop":"10",
     "lolipop_broadcast_cmd": "aireplaly-ng -1 10 -c %BSSID% -h %CLIENT% wlan0",
     "lolipop_client_cmd": "aireplaly-ng -1 10 -c %BSSID% -h %CLIENT% wlan0",
 }
@@ -82,6 +90,10 @@ SETTING_TYPES = {
     "scan_cmd": "text",
     "lolipop_broadcast_cmd": "str",
     "lolipop_client_cmd": "str",
+    "wifi_card":"text",
+    "deauth_count":"text",
+    "scan_time":"text",
+    "max_attack_loop":"text",
 }
 
 # =========================
@@ -198,7 +210,7 @@ class SettingsWindow(QMainWindow):
         self._db_path = Path(sqlite_path)
         self._conn = _ensure_db(self._db_path)
         self._values = _load_settings(self._conn)
-
+        self.setFixedWidth(1200)
         # Main layout: sidebar + stacked pages
         root = QWidget()
         root_layout = QHBoxLayout(root)
@@ -207,7 +219,7 @@ class SettingsWindow(QMainWindow):
 
         self.sidebar = QListWidget()
         self.sidebar.setIconSize(QSize(24, 24))
-        self.sidebar.setFixedWidth(220)
+        self.sidebar.setFixedWidth(160)
         self.sidebar.setUniformItemSizes(True)
         self.sidebar.setAlternatingRowColors(False)
         self.sidebar.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -329,12 +341,25 @@ class SettingsWindow(QMainWindow):
             le.setText(str(self._values.get(key, "")))
             return le
 
+        # scan_cmd (multiline)
+        self.te_wifi_card = _mk_line("wifi_card")
+        layout.addRow(APPLICATIONS_LABELS["wifi_card"], self.te_wifi_card)
+        # scan_cmd (multiline)
+        self.te_deauth_count = _mk_line("deauth_count")
+        layout.addRow(APPLICATIONS_LABELS["deauth_count"], self.te_deauth_count)
+        # scan_cmd (multiline)
+        self.te_scan_time = _mk_line("scan_time")
+        layout.addRow(APPLICATIONS_LABELS["scan_time"], self.te_scan_time)
+
+        self.te_max_attack_loop = _mk_line("max_attack_loop")
+        layout.addRow(APPLICATIONS_LABELS["max_attack_loop"], self.te_max_attack_loop)
+
         # enable_monitor_cmds (multiline)
-        self.te_enable_monitor = _mk_plain("enable_monitor_cmds", 4)
+        self.te_enable_monitor = _mk_plain("enable_monitor_cmds", 3)
         layout.addRow(APPLICATIONS_LABELS["enable_monitor_cmds"], self.te_enable_monitor)
 
         # disable_monitor_cmds (multiline)
-        self.te_disable_monitor = _mk_plain("disable_monitor_cmds", 4)
+        self.te_disable_monitor = _mk_plain("disable_monitor_cmds", 3)
         layout.addRow(APPLICATIONS_LABELS["disable_monitor_cmds"], self.te_disable_monitor)
 
         # set_channel_cmd (single line)
@@ -342,7 +367,7 @@ class SettingsWindow(QMainWindow):
         layout.addRow(APPLICATIONS_LABELS["set_channel_cmd"], self.le_set_channel)
 
         # scan_cmd (multiline)
-        self.te_scan = _mk_plain("scan_cmd", 4)
+        self.te_scan = _mk_line("scan_cmd")
         layout.addRow(APPLICATIONS_LABELS["scan_cmd"], self.te_scan)
 
         # lolipop_broadcast_cmd (single line)
@@ -375,14 +400,21 @@ class SettingsWindow(QMainWindow):
         values["fast_mode"] = bool(self.chk_fast_mode.isChecked())
         values["default_screen"] = self.cmb_default_screen.currentText()
         values["automatic_turn_on"] = bool(self.chk_automatic.isChecked())
-
+        
         # Applications
+        values["wifi_card"] = self.te_wifi_card.text()
+        values["deauth_count"] = self.te_deauth_count.text()
+        
         values["enable_monitor_cmds"] = self.te_enable_monitor.toPlainText()
         values["disable_monitor_cmds"] = self.te_disable_monitor.toPlainText()
         values["set_channel_cmd"] = self.le_set_channel.text()
-        values["scan_cmd"] = self.te_scan.toPlainText()
+        values["scan_cmd"] = self.te_scan.text()
         values["lolipop_broadcast_cmd"] = self.le_broadcast.text()
         values["lolipop_client_cmd"] = self.le_client.text()
+        values["deauth_count"] = self.te_deauth_count.text()
+        values["scan_time"] = self.te_scan_time.text()
+        values["max_attack_loop"] = self.te_max_attack_loop.text()
+        
         return values
 
     def save_settings(self):

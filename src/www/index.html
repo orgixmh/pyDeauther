@@ -16,12 +16,17 @@
 		<link
 			rel="stylesheet"
 			type="text/css"
+			href="style/fonts/gFonts.css"
+		/>
+		<link
+			rel="stylesheet"
+			type="text/css"
 			href="style/switch.css"
 		/>
 		<link rel="icon" type="image/png" href="favicon.png" />
 		<title>pyDeauther v0.0.1</title>
 		<script src="./components/dial.js"></script>
-		<script src="https://unpkg.com/rot-js@2.1.1/dist/rot.js"></script>
+		<script src="./util/rot.js"></script>
 		<script type="importmap">
 			{
 				"imports": {
@@ -137,21 +142,36 @@
 			</div>
 		</div>
 
-		<script src="./terminal.mjs" type="module"></script>
-
+		
 		<script type="module">
 		  import { typeOut } from './util/screens.js';
+		  import { on, off } from './util/power.js';
 		  globalThis.typeOut = typeOut;
+		  globalThis.on = on;
+		  globalThis.off = off;
 		</script>
 
 		<script>
+		   document.scannerState = true;
+		   document.attackState = true;
+		   document.modeState = true;
+		   
+
+		   function togglePower() {
+				let isOff = document.getElementById("monitor").classList.contains("off");
+			if (isOff) {
+				on();
+			} else {
+				off();
+			}
+		  }
 		  // Run only after DOM is ready
 		  window.addEventListener('DOMContentLoaded', () => {
 		    new QWebChannel(qt.webChannelTransport, function(channel) {
 		      window.bridge = channel.objects.bridge;
 		    });
 		  });
-
+	
 		  function receiveData(obj) {
 
 		    console.log("Received from backend: ", obj);
@@ -160,12 +180,36 @@
 		    
 		    if ( command == "typeOut"){
    				typeOut(data);
+   			}else if ( command == "pyConfig" ){
+   				console.log("Python Config received!")
+   				document.pyConfig = obj.data;
+   				if (document.pyConfig.automatic_turn_on){
+					togglePower();
+				}
+				if (document.pyConfig.default_screen == "Matrix"){
+					document.getElementById("theme-green").click()
+				}else if(document.pyConfig.default_screen == "Red Queen"){
+					document.getElementById("theme-red").click()
+				}else {
+					document.getElementById("theme-blue").click()
+				}
+   			}else if ( command == "scannerState" ){
+			   document.scannerState = data == "true" ? true : false;
    			}
+   			else if ( command == "attackState" ){
+			   document.attackState = data == "true" ? true : false;
+   			}else if ( command =="modeState" ) {
+   				document.modeState = data == "true" ? true : false;
+   			}
+   			
 
 		    return { ok: true };
 
 		  }
+
 		</script>
+		<script src="./terminal.mjs" type="module"></script>
+
 
 	</body>
 </html>

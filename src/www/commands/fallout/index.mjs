@@ -67,6 +67,7 @@ async function intro() {
 }
 
 async function locked() {
+	await intro()
 	let locked = getScreen("locked");
 
 	await type(

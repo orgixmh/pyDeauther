@@ -4,12 +4,12 @@ import pathlib
 import sqlite3
 from typing import Optional, Tuple, List, Dict
 
-NETWORKS_HEADER = ["BSSID", "First time seen", "Last time seen", "channel", "Speed",
+NETWORKS_HEADER = ["BSSID", "First time seen", "Last time seen", "channel", "CH", "Speed",
                    "Privacy", "Cipher", "Authentication", "Power", "beacons", "IV",
                    "LAN IP", "ID-length", "ESSID", "Key"]
 
 CLIENTS_HEADER = ["Station MAC", "First time seen", "Last time seen", "Power",
-                  "# packets", "BSSID", "Probed ESSIDs"]
+                  "# packets", "BSSID", "STATION","Probed ESSIDs"]
 
 def to_int_or_none(x: str) -> Optional[int]:
     try:
@@ -20,38 +20,92 @@ def to_int_or_none(x: str) -> Optional[int]:
 def normalize_bssid(x: str) -> str:
     return x.strip().upper()
 
+def _norm(h: str) -> str:
+    """normalize header tokens: lower, trim, collapse spaces"""
+    return " ".join(h.strip().lower().split())
+
+def _find_col(header: List[str], *aliases: str) -> Optional[int]:
+    """find the first index in header matching any alias"""
+    hmap = { _norm(h): i for i, h in enumerate(header) }
+    for a in aliases:
+        if a in hmap:
+            return hmap[a]
+    return None
+
 def parse_airodump_csv(csv_path: pathlib.Path) -> Tuple[List[Dict], List[Dict]]:
-    networks = []
-    clients = []
+    """
+    Robust parser for airodump-ng CSV that tolerates header name changes like:
+      - channel <-> CH
+      - Station MAC <-> STATION
+    """
+    networks: List[Dict] = []
+    clients: List[Dict] = []
+
     with csv_path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.reader(f)
-        mode = None
-        for row in reader:
-            if not row or all((c.strip() == "" for c in row)):
-                continue
-            header = [c.strip() for c in row]
-            if header[:len(NETWORKS_HEADER)] == NETWORKS_HEADER:
-                mode = "networks"; continue
-            if header[:len(CLIENTS_HEADER)] == CLIENTS_HEADER:
-                mode = "clients"; continue
+        mode: Optional[str] = None   # "networks" | "clients" | None
+        idx = {}  # indices for current section
 
+        for row in reader:
+            # Skip empty/blank rows
+            if not row or all(c.strip() == "" for c in row):
+                continue
+
+            header = [_norm(c) for c in row]
+
+            # ---- Detect (or re-detect) section + build index map ----
+            # NETWORKS section typically has BSSID and ESSID columns.
+            if ("bssid" in header) and ("essid" in header):
+                mode = "networks"
+                idx = {
+                    "bssid": _find_col(row, "bssid"),
+                    "channel": _find_col(row, "channel", "ch"),
+                    "essid": _find_col(row, "essid", "ssid"),
+                }
+                # If something critical is missing, keep going; we’ll skip rows gracefully.
+                continue
+
+            # CLIENTS section has Station MAC/Station and BSSID.
+            if (("station mac" in header) or ("station" in header)) and ("bssid" in header):
+                mode = "clients"
+                idx = {
+                    "station": _find_col(row, "station mac", "station"),
+                    "bssid": _find_col(row, "bssid"),
+                }
+                continue
+
+            # ---- Parse rows according to current section ----
             if mode == "networks":
                 try:
-                    bssid = normalize_bssid(row[0])
-                    channel = to_int_or_none(row[3])
-                    ssid = row[13].strip() if len(row) > 13 else ""
+                    i_bssid = idx.get("bssid")
+                    i_ch    = idx.get("channel")
+                    i_ssid  = idx.get("essid")
+                    if i_bssid is None or i_ssid is None:
+                        continue  # missing critical columns
+                    bssid = normalize_bssid(row[i_bssid])
+                    channel = to_int_or_none(row[i_ch]) if (i_ch is not None and i_ch < len(row)) else None
+                    ssid = row[i_ssid].strip() if (i_ssid < len(row)) else ""
                     networks.append({"ssid": ssid, "bssid": bssid, "channel": channel})
                 except Exception:
                     continue
+
             elif mode == "clients":
                 try:
-                    station_mac = normalize_bssid(row[0])
-                    ap_bssid = row[5].strip().upper() if len(row) > 5 else ""
-                    associated = None if ap_bssid in {"(NOT ASSOCIATED)", "FF:FF:FF:FF:FF:FF", ""} else normalize_bssid(ap_bssid)
+                    i_sta = idx.get("station")
+                    i_bss = idx.get("bssid")
+                    if i_sta is None:
+                        continue
+                    station_mac = normalize_bssid(row[i_sta])
+                    ap_bssid_raw = row[i_bss].strip().upper() if (i_bss is not None and i_bss < len(row)) else ""
+                    # treat NOT ASSOCIATED and broadcast as None
+                    bad = {"(NOT ASSOCIATED)", "FF:FF:FF:FF:FF:FF", ""}
+                    associated = None if ap_bssid_raw in bad else normalize_bssid(ap_bssid_raw)
                     clients.append({"client_bssid": station_mac, "associated_network": associated})
                 except Exception:
                     continue
+
     return networks, clients
+
 
 def init_db(conn: sqlite3.Connection) -> None:
     cur = conn.cursor()
